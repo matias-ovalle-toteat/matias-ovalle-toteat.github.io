@@ -19,7 +19,10 @@
         iminPrintInstance.getPrinterStatus("SPI", (status) => {
           console.log('status', status, JSON.stringify(status));
           if (status.value === 0) {
-            iminPrintInstance.printText("Hello World");
+            iminPrintInstance.setTextSize(16);
+            iminPrintInstance.setTextTypeface(1); // Monospaced
+            iminPrintInstance.printText("Hello World", 0);
+            iminPrintInstance.printAndFeedPaper(25);
             console.log('printText');
           }
         });
