@@ -6,7 +6,7 @@
 </head>
 <body>
   <div>
-    <button onclick="initPrinter('hello world')">printer</button>
+    <button onclick="initPrinter('la clave de este tables es 1234')">printer</button>
   </div>
 </body>
 <script>
@@ -18,17 +18,19 @@
     iminPrintInstance.connect((ws) => {
       if (ws.readyState === ws.OPEN) {
         iminPrintInstance.initPrinter("SPI");
-        iminPrintInstance.getPrinterStatus("SPI", (status) => {
-          if (status.value === 0) {
-            console.log('imin printer', 'ready to print');
-            iminPrintInstance.printText(`${message}\n\n`, 0);
-            iminPrintInstance.printAndFeedPaper(25);
-            printMessage(iminPrintInstance, 'holiwi');
-            console.log('imin printer', 'already printed');
-          } else {
-            console.error('imin printer error', 'status.value is not 0.', 'status:', status);
-          }
-        });
+        let iminPrinterStatus = null;
+        const numberOfRetries = 0;
+        do {
+          iminPrintInstance.getPrinterStatus("SPI", (status) => {
+            iminPrinterStatus = status.value;
+            if (status.value === 0) {
+              printMessage(iminPrintInstance, message);
+            } else {
+              console.error('imin printer error', 'status.value is not 0.', 'status:', status);
+            }
+          });
+          numberOfRetries += 1;
+        } while (iminPrinterStatus === 0 && numberOfRetries < 3);
       } else {
         console.error('imin printer error', 'ws.readyState is not OPEN:', ws.readyState);
       }
@@ -36,8 +38,10 @@
   }
 
   function printMessage(printer, message) {
-    printer.printText(`${message}`, 1);
+    console.log('imin printer', 'ready to print');
+    printer.printText(`${message}\n\n`, 0);
     printer.printAndFeedPaper(25);
+    console.log('imin printer', 'already printed');
   }
 </script>
 <script id="iminprintjs">
