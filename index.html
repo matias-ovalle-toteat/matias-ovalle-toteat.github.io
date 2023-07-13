@@ -21,7 +21,8 @@
           if (status.value === 0) {
             iminPrintInstance.setTextSize(16);
             iminPrintInstance.setTextTypeface(1); // Monospaced
-            iminPrintInstance.printText("Hello World", 0);
+            const message = "hello world";
+            iminPrintInstance.printText(`${message}\n\n`, 0);
             iminPrintInstance.printAndFeedPaper(25);
             console.log('printText');
           }
