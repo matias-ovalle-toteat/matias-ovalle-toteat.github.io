@@ -12,6 +12,9 @@
 <script>
   function initPrinter(message) {
     iminPrintInstance = window.iminPrint('localhost');
+    if (!iminPrintInstance) {
+      console.error('imin printer error', 'imin print device not found on localhost');
+    }
     iminPrintInstance.connect((ws) => {
       if (ws.readyState === ws.OPEN) {
         iminPrintInstance.initPrinter("SPI");
@@ -20,6 +23,7 @@
             console.log('imin printer', 'ready to print');
             iminPrintInstance.printText(`${message}\n\n`, 0);
             iminPrintInstance.printAndFeedPaper(25);
+            printMessage(iminPrintInstance, 'holiwi');
             console.log('imin printer', 'already printed');
           } else {
             console.error('imin printer error', 'status.value is not 0.', 'status:', status);
@@ -29,6 +33,11 @@
         console.error('imin printer error', 'ws.readyState is not OPEN:', ws.readyState);
       }
     });
+  }
+
+  function printMessage(printer, message) {
+    printer.printText(`${message}`, 0);
+    printer.printAndFeedPaper(25);
   }
 </script>
 <script id="iminprintjs">
@@ -350,6 +359,7 @@
                     text: type == 0 ? (text.charAt(text.length - 1) == 'n' ? (text.slice(0, text.length - 1) + '\n') : text) : text,
                     value: (type <= 0 ? 0 : (type >= 1 ? 1 : type))
                 }
+                console.log('send Message', sendMessage);
                 self.ws.send(JSON.stringify({
                     data: sendMessage,
                     type: 13
