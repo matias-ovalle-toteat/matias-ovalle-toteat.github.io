@@ -7,13 +7,13 @@
 <body>
   <div>
     <button onclick="initPrinter()">init printer</button>
-    <button onclick="printMessage()">print text</button>
-    <button onclick="feedPaper()">feed paper</button>
-    <button onclick="printLongMessage()">print long text</button>
+    <button onclick="initPrinter('print')">print text</button>
+    <button onclick="initPrinter('paper')">feed paper</button>
+    <!-- <button onclick="printLongMessage()">print long text</button> -->
   </div>
 </body>
 <script>
-  function initPrinter() {
+  function initPrinter(message) {
     iminPrintInstance = window.iminPrint('localhost');
     iminPrintInstance.connect((ws) => {
       if (ws.readyState === ws.OPEN) {
@@ -24,6 +24,12 @@
           if (status.value === 0) {
             iminPrintInstance.setTextSize(16);
             iminPrintInstance.setTextTypeface(1); // Monospaced
+            if (message === 'print') {
+              const message = "hello world";
+              iminPrintInstance.printText(`${message}\n\n`, 0);
+            } else if (message === 'paper') {
+              iminPrintInstance.printAndFeedPaper(25);
+            }
           }
         });
       }
