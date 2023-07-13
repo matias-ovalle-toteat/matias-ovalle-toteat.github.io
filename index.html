@@ -16,8 +16,13 @@
       if (ws.readyState === ws.OPEN) {
         iminPrintInstance.initPrinter("SPI");
         console.log('initPrinter');
-        iminPrintInstance.printText("Hello world");
-        console.log('printText');
+        iminPrintInstance.getPrinterStatus("SPI", (status) => {
+          console.log('status', status, JSON.stringify(status));
+          if (status.value === 0) {
+            iminPrintInstance.printText("Hello World");
+            console.log('printText');
+          }
+        });
       }
     });
   }
