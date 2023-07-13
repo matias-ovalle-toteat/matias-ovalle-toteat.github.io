@@ -14,8 +14,10 @@
     iminPrintInstance = window.iminPrint('localhost');
     iminPrintInstance.connect((ws) => {
       if (ws.readyState === ws.OPEN) {
+        iminPrintInstance.initPrinter("SPI");
+        console.log('initPrinter');
         iminPrintInstance.printText("Hello world");
-        console.log('text printed');
+        console.log('printText');
       }
     });
   }
