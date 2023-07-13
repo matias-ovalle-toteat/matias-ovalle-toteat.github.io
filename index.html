@@ -6,12 +6,15 @@
 </head>
 <body>
   <div>
-    <button onclick="test()">click me</button>
+    <button onclick="initPrinter()">init printer</button>
+    <button onclick="printText()">print text</button>
+    <button onclick="feedPaper()">print text</button>
+    <button onclick="printLongText()">print long text</button>
   </div>
 </body>
 <script>
-  async function test() {
-    iminPrintInstance = window.iminPrint('localhost');
+  iminPrintInstance = window.iminPrint('localhost');
+  function initPrinter() {
     iminPrintInstance.connect((ws) => {
       if (ws.readyState === ws.OPEN) {
         iminPrintInstance.initPrinter("SPI");
@@ -21,14 +24,37 @@
           if (status.value === 0) {
             iminPrintInstance.setTextSize(16);
             iminPrintInstance.setTextTypeface(1); // Monospaced
-            const message = "hello world";
-            iminPrintInstance.printText(`${message}\n\n`, 0);
-            iminPrintInstance.printAndFeedPaper(25);
-            console.log('printText');
           }
         });
       }
     });
+  }
+
+  function printText() {
+    const message = "hello world";
+    iminPrintInstance.printText(`${message}\n\n`, 0);
+  }
+
+  function printLongText() {
+    const message = `I met a traveller from an antique land,
+Who said—Two vast and trunkless legs of stone
+Stand in the desert. . . . Near them, on the sand,
+Half sunk a shattered visage lies, whose frown,
+And wrinkled lip, and sneer of cold command,
+Tell that its sculptor well those passions read
+Which yet survive, stamped on these lifeless things,
+The hand that mocked them, and the heart that fed;
+And on the pedestal, these words appear:
+My name is Ozymandias, King of Kings;
+Look on my Works, ye Mighty, and despair!
+Nothing beside remains. Round the decay
+Of that colossal Wreck, boundless and bare
+The lone and level sands stretch far away.`
+    iminPrintInstance.printText(`${message}\n\n`, 0);
+  }
+
+  function feedPaper() {
+    iminPrintInstance.printAndFeedPaper(25);
   }
 </script>
 <script id="iminprintjs">
