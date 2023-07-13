@@ -10,10 +10,14 @@
   </div>
 </body>
 <script>
-  function test() {
+  async function test() {
     iminPrintInstance = window.iminPrint('localhost');
-    iminPrintInstance.connect();
-    iminPrintInstance.printText("Hello world");
+    iminPrintInstance.connect((ws) => {
+      if (ws.readyState === ws.OPEN) {
+        iminPrintInstance.printText("Hello world");
+        console.log('text printed');
+      }
+    });
   }
 </script>
 <script id="iminprintjs">
