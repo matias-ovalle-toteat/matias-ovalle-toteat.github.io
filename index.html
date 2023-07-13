@@ -12,13 +12,8 @@
 <script>
   function test() {
     iminPrintInstance = window.iminPrint('localhost');
-    const type = iminPrintInstance.PrintConnectType
-    console.log('debug', type);
-    // console.log(iminPrint);
-    iminPrintInstance.connect((ws) => {
-      // console.log('ws', ws, ws.OPEN);
-    });
-
+    iminPrintInstance.connect();
+    iminPrintInstance.printText("Hello world");
   }
 </script>
 <script id="iminprintjs">
@@ -56,7 +51,6 @@
                 return;
             }
             try {
-                console.log('address', this.address);
                 this.ws = new Socket('ws://' + this.address + '/websocket');
                 this.soketEvent(callback)
             } catch (error) {
