@@ -13,8 +13,8 @@
   </div>
 </body>
 <script>
-  iminPrintInstance = window.iminPrint('localhost');
   function initPrinter() {
+    iminPrintInstance = window.iminPrint('localhost');
     iminPrintInstance.connect((ws) => {
       if (ws.readyState === ws.OPEN) {
         iminPrintInstance.initPrinter("SPI");
@@ -31,11 +31,13 @@
   }
 
   function printText() {
+    iminPrintInstance = window.iminPrint('localhost');
     const message = "hello world";
     iminPrintInstance.printText(`${message}\n\n`, 0);
   }
 
   function printLongText() {
+    iminPrintInstance = window.iminPrint('localhost');
     const message = `I met a traveller from an antique land,
 Who said—Two vast and trunkless legs of stone
 Stand in the desert. . . . Near them, on the sand,
@@ -54,6 +56,7 @@ The lone and level sands stretch far away.`
   }
 
   function feedPaper() {
+    iminPrintInstance = window.iminPrint('localhost');
     iminPrintInstance.printAndFeedPaper(25);
   }
 </script>
