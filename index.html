@@ -19,8 +19,9 @@
       if (ws.readyState === ws.OPEN) {
         iminPrintInstance.initPrinter("SPI");
         let iminPrinterStatus = null;
-        const numberOfRetries = 0;
+        let numberOfRetries = 0;
         do {
+          console.log('intento numero', numberOfRetries);
           iminPrintInstance.getPrinterStatus("SPI", (status) => {
             iminPrinterStatus = status.value;
             if (status.value === 0) {
