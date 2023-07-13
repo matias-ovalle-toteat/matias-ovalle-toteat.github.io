@@ -6,10 +6,7 @@
 </head>
 <body>
   <div>
-    <button onclick="initPrinter()">init printer</button>
-    <button onclick="initPrinter('print')">print text</button>
-    <button onclick="initPrinter('paper')">feed paper</button>
-    <button onclick="initPrinter('long')">print long text</button>
+    <button onclick="initPrinter('hello world')">printer</button>
   </div>
 </body>
 <script>
@@ -20,14 +17,8 @@
         iminPrintInstance.initPrinter("SPI");
         iminPrintInstance.getPrinterStatus("SPI", (status) => {
           if (status.value === 0) {
-            // iminPrintInstance.setTextSize(16);
-            // iminPrintInstance.setTextTypeface(1); // Monospaced
-            if (message === 'print') {
-              const message = "hello world";
-              iminPrintInstance.printText(`${message}\n\n`, 0);
-            } else if (message === 'paper') {
-              iminPrintInstance.printAndFeedPaper(25);
-            }
+            iminPrintInstance.printText(`${message}\n\n`, 0);
+            iminPrintInstance.printAndFeedPaper(25);
           }
         });
       }
