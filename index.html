@@ -11,28 +11,20 @@
 </body>
 <script>
   function initPrinter(message) {
-    iminPrintInstance = window.iminPrint('localhost');
+    const iminPrintInstance = window.iminPrint('localhost');
     if (!iminPrintInstance) {
       console.error('imin printer error', 'imin print device not found on localhost');
     }
     iminPrintInstance.connect((ws) => {
       if (ws.readyState === ws.OPEN) {
         iminPrintInstance.initPrinter("SPI");
-        let iminPrinterStatus = null;
-        let numberOfRetries = 0;
-        do {
-          console.log('intento numero', numberOfRetries);
-          iminPrintInstance.getPrinterStatus("SPI", (status) => {
-            iminPrinterStatus = status.value;
-            if (status.value === 0) {
-              printMessage(iminPrintInstance, message);
-            } else {
-              console.error('imin printer error', 'status.value is not 0.', 'status:', status);
-            }
-          });
-          numberOfRetries += 1;
-          console.log('debug', numberOfRetries, iminPrinterStatus, status.value);
-        } while (iminPrinterStatus === 0 && numberOfRetries < 3);
+        iminPrintInstance.getPrinterStatus("SPI", (status) => {
+          if (status.value === 0) {
+            printMessage(iminPrintInstance, message);
+          } else {
+            console.error('imin printer error', 'status.value is not 0.', 'status:', status);
+          }
+        });
       } else {
         console.error('imin printer error', 'ws.readyState is not OPEN:', ws.readyState);
       }
