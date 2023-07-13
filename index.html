@@ -1,0 +1,704 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <div>
+    <button onclick="test()">click me</button>
+  </div>
+</body>
+<script>
+  function test() {
+    iminPrintInstance = window.iminPrint('localhost');
+    const type = iminPrintInstance.PrintConnectType
+    console.log('debug', type);
+    // console.log(iminPrint);
+    iminPrintInstance.connect((ws) => {
+      // console.log('ws', ws, ws.OPEN);
+    });
+
+  }
+</script>
+<script id="iminprintjs">
+  ! function (global, factory) {
+    "use strict";
+
+    if (typeof module === "object" && typeof module.exports === "object") {
+
+        module.exports = global.iminPrint ? factory(global, true) : function (w) {
+            if (!w.iminPrint) {
+                throw new Error("iminos requires a window");
+            }
+            return factory(w);
+        };
+    } else {
+        factory(global);
+    }
+}(typeof window !== "undefined" ? window : this, function (window, noGlobal) {
+    var iminPrint = function (address) {
+        return new iminPrint.fn.init(address);
+    };
+
+    iminPrint.fn = iminPrint.prototype = {
+        constructor: iminPrint,
+        /**
+         *  websoket Initializing the connection
+         * @param {function} callback Event handling callback function
+         * @returns
+         */
+        connect: function (callback) {
+            var self = this,
+                Socket = window.MozWebSocket || window.WebSocket;
+            if (!Socket) { // Checking browser support
+                alert('Error: Browser does not support Websocket');
+                return;
+            }
+            try {
+                console.log('address', this.address);
+                this.ws = new Socket('ws://' + this.address + '/websocket');
+                this.soketEvent(callback)
+            } catch (error) {
+                // reconnection
+                self.reconnect();
+            }
+
+            return this;
+        },
+        /**
+         * websoket Related Event handling
+         * @param {function} callback  websoket Event handling callback function
+         */
+        soketEvent: function (callback) {
+            var self = this;
+            this.ws.onclose = function () {
+                console.log('链接关闭');
+                self.reconnect(self.address);
+                typeof callback == 'function' && callback(self.ws)
+            }
+            this.ws.onerror = function () {
+                console.log('发生异常了');
+                self.reconnect(self.address);
+                typeof callback == 'function' && callback(self.ws)
+            }
+            window.onbeforeunload = function (event) {
+                console.log("关闭WebSocket连接！");
+                self.ws.close();
+            }
+            this.ws.onopen = function () {
+                console.log('已连接');
+                typeof callback == 'function' && callback(self.ws)
+                if (self.ws.readyState !== self.ws.OPEN) return self.reconnect(self.address);
+                document.addEventListener('visibilitychange', function () {
+                    var string = document.visibilityState;
+                    console.log(string)
+                    if (string == 'hidden') {
+                        console.log('I was hidden');
+                    }
+                    if (string == 'visible') {
+                        console.log('welcome back')
+                        IminPrintInstance.initPrinter(self.currentPrintConnectType, 1);
+                    }
+                })
+                //心跳检测重置
+                self.heartCheck.start(self.ws);
+            };
+            this.ws.onmessage = function (event) {
+                console.log('收到消息:' + event.data)
+                if ( event.data !== 'request'  && JSON.parse(event.data) && JSON.parse(event.data).data && (JSON.parse(event.data).data.text && JSON.parse(event.data).data.text == 'ping')) {
+                    //接收到心跳
+                    console.log('接收到心跳:' + JSON.stringify(event.data));
+                    if (self.ws.readyState !== self.ws.OPEN) return self.reconnect(self.address);;
+
+                    self.heartCheck.start(self.ws);
+                } else {
+                    if (self.callback && typeof callback == 'function') {
+                        self.callback(event)
+                    }
+                }
+            }
+        },
+        /**
+         * Disconnect the reconnection
+         */
+        reconnect: function () {
+            var self = this;
+            if (this.lockReconnect) {
+                return;
+            };
+            this.lockReconnect = true;
+            //No connection will be reconnected, set delay to avoid too many requests
+            this.timer && clearTimeout(this.timer);
+            this.timer = setTimeout(function () {
+                self.connect(self.address);
+                self.lockReconnect = false;
+            }, 4000)
+        },
+        /**
+         * heartbeat detection
+         */
+        heartCheck: {
+            timeout: 3000,
+            timeoutObj: null,
+            serverTimeoutObj: null,
+            /**
+             * Heartbeat detection started.
+             * @param {*} ws  websoket Object
+             */
+            start: function (ws) {
+                var self = this;
+                this.timeoutObj && clearTimeout(this.timeoutObj);
+                this.serverTimeoutObj && clearTimeout(this.serverTimeoutObj);
+                this.timeoutObj = setTimeout(function () {
+                    //It sends a heartbeat, the back end receives it, it sends a heartbeat message,
+                    ws.send(JSON.stringify({
+                        data: {
+                            text: 'ping',
+                            value: -1
+                        },
+                        type: 0
+                    }));
+                    self.serverTimeoutObj = setTimeout(function () {
+                        ws.close();
+                    }, self.timeout);
+
+                }, this.timeout)
+            }
+        },
+        /**
+         * Initialize the printer
+         * @param {string} PrintConnectType   example: USB | SPI | Bluetooth
+         */
+        initPrinter: function (PrintConnectType, type) {
+            console.log('PrintConnectType:' + PrintConnectType);
+            this.currentPrintConnectType = PrintConnectType;
+            this.ws.send(JSON.stringify({
+                data: {
+                    text: PrintConnectType,
+                    value: type || -1
+
+                },
+                type: 1
+            }))
+
+        },
+
+        /**
+         * Get printer status
+         * @param { string  } PrintConnectType  example: USB | SPI | Bluetooth
+         * @param { function } callback  Printer state callback function
+         */
+        getPrinterStatus: function (PrintConnectType, callback) {
+            var self = this;
+            this.ws.send(JSON.stringify({
+                data: {
+                    text: PrintConnectType,
+                    value: -1
+                },
+                type: 2
+            }));
+            this.callback = function (event) {
+                if (event.data !== 'request'  && JSON.parse(event.data).type == 2) {
+                    console.log(JSON.parse(event.data));
+                    var status = JSON.parse(event.data).data;
+                    status.text = self.PrinterStatus[status.value];
+                    callback(status)
+                }
+            }
+        },
+        /**
+         * Print and feed paper
+         */
+        printAndLineFeed: function () {
+            this.ws.send(JSON.stringify({
+                data: {
+                    text: '',
+                    value: -1
+                },
+                type: 3
+            }));
+        },
+        /**
+         * Print blank lines
+         * @param {number} height  example: 0-255
+         */
+        printAndFeedPaper: function (height) {
+            this.ws.send(JSON.stringify({
+                data: {
+                    text: '',
+                    value: (height <= 0 ? 0 : (height >= 255 ? 255 : height))
+                },
+                type: 4
+            }));
+        },
+        /**
+         * Cutter (paper cutting) correlation
+         */
+        partialCut: function () {
+            this.ws.send(JSON.stringify({
+                data: {
+                    text: '',
+                    value: -1
+                },
+                type: 5
+            }));
+        },
+        /**
+         * Set text alignment
+         * @param {number} alignment  example: 0 = left / 1 = center / 2 = right / default = 0
+         */
+        setAlignment: function (alignment) {
+            var self = this;
+            self.ws.send(JSON.stringify({
+                data: {
+                    text: '',
+                    value: (alignment <= 0 ? 0 : (alignment >= 2 ? 2 : alignment))
+                },
+                type: 6
+            }));
+        },
+        /**
+         * Set text size
+         * @param {number} size   example: 28
+         */
+        setTextSize: function (size) {
+            var self = this;
+            self.ws.send(JSON.stringify({
+                data: {
+                    text: '',
+                    value: size
+                },
+                type: 7
+            }));
+        },
+        /**
+         * Set font
+         * @param {string} typeface
+         */
+        setTextTypeface: function (typeface) {
+            var self = this;
+            self.ws.send(JSON.stringify({
+                data: {
+                    text: '',
+                    value: typeface
+                },
+                type: 8
+            }));
+        },
+        /**
+         * Set font style
+         * @param {*} style  example: NORMAL = 0 BOLD = 1 ITALIC = 2 BOLD_ITALIC = 3
+         */
+        setTextStyle: function (style) {
+            var self = this;
+            self.ws.send(JSON.stringify({
+                data: {
+                    text: '',
+                    value: (style <= 0 ? 0 : (style >= 3 ? 3 : style))
+                },
+                type: 9
+            }));
+        },
+        /**
+         * Set line spacing
+         * @param {*} space
+         */
+        setTextLineSpacing: function (space) {
+            var self = this;
+            self.ws.send(JSON.stringify({
+                data: {
+                    text: '',
+                    value: space
+                },
+                type: 10
+            }));
+        },
+        /**
+         * Set print width
+         * @param {*} width
+         */
+        setTextWidth: function (width) {
+            var self = this;
+            self.ws.send(JSON.stringify({
+                data: {
+                    text: '',
+                    value: (width <= 0 ? 0 : (width >= 576 ? 576 : width))
+                },
+                type: 11
+            }));
+        },
+        /**
+         * Print text
+         * @param {string} text
+         * @param {number} type
+         */
+        printText: function (text, type) {
+            var self = this;
+            var sendMessage;
+            if (type !== undefined) {
+                sendMessage = {
+                    text: type == 0 ? (text.charAt(text.length - 1) == 'n' ? (text.slice(0, text.length - 1) + '\n') : text) : text,
+                    value: (type <= 0 ? 0 : (type >= 1 ? 1 : type))
+                }
+                self.ws.send(JSON.stringify({
+                    data: sendMessage,
+                    type: 13
+                }));
+            } else {
+                sendMessage = {
+                    text: text,
+                    value: -1
+                };
+                self.ws.send(JSON.stringify({
+                    data: sendMessage,
+                    type: 12
+                }));
+            }
+
+
+        },
+        /**
+         * Print a row of the table (not support Arabic)
+         * @param {*} colTextArr
+         * @param {*} colWidthArr
+         * @param {*} colAlign
+         * @param {*} width
+         * @param {*} size
+         */
+        printColumnsText: function (colTextArr, colWidthArr, colAlign, size, width) {
+            var newColAlign = [];
+            if (colAlign && colAlign.length) {
+                for (var i = 0; i < colAlign.length; i++) {
+                    var item = colAlign[i];
+                    newColAlign.push((item <= 0 ? 0 : (item >= 2 ? 2 : item)))
+                }
+            }
+            this.ws.send(JSON.stringify({
+                data: {
+                    colTextArr: colTextArr,
+                    colWidthArr: colWidthArr,
+                    colAlign: (newColAlign.length ? newColAlign : colAlign),
+                    size: size,
+                    text: '',
+                    value: (width < 0 ? 0 : (width > 576 ? 576 : width))
+                },
+                type: 14
+            }));
+
+        },
+        /**
+         * Set barcode width
+         * @param {*} width
+         */
+        setBarCodeWidth: function (width) {
+            this.ws.send(JSON.stringify({
+                data: {
+                    text: '',
+                    value: (width !== undefined ? (width <= 2 ? 2 : (width >= 6 ? 6 : width)) : 3)
+                },
+                type: 15
+            }))
+        },
+        /**
+         * Set the height of the barcode
+         * @param {*} height
+         */
+        setBarCodeHeight: function (height) {
+            this.ws.send(JSON.stringify({
+                data: {
+                    text: '',
+                    value: (height <= 1 ? 1 : (height >= 255 ? 255 : height))
+                },
+                type: 16
+            }))
+        },
+        /**
+         * When printing barcodes, select the printing position for HRI characters
+         * @param {*} position
+         */
+        setBarCodeContentPrintPos: function (position) {
+            this.ws.send(JSON.stringify({
+                data: {
+                    text: '',
+                    value: (position <= 0 ? 0 : (position >= 3 ? 3 : position))
+                },
+                type: 17
+            }))
+        },
+        /**
+         * Print barcode
+         * @param {*} barCodeType
+         * @param {*} barCodeContent
+         * @param {*} alignmentMode
+         */
+        printBarCode: function (barCodeType, barCodeContent, alignmentMode) {
+            if (alignmentMode !== undefined) {
+                this.ws.send(JSON.stringify({
+                    data: {
+                        value: (barCodeType <= 0 ? 0 : (barCodeType >= 6 ? 6 : barCodeType)),
+                        text: barCodeContent
+                    },
+                    type: 18
+                }))
+            } else {
+                this.ws.send(JSON.stringify({
+                    data: {
+                        value: (barCodeType <= 0 ? 0 : (barCodeType >= 6 ? 6 : barCodeType)),
+                        text: barCodeContent,
+                        alignmentMode: (alignmentMode <= 0 ? 0 : (alignmentMode >= 2 ? 2 : alignmentMode))
+                    },
+                    type: 19
+                }))
+            }
+
+        },
+        /**
+         * Set the size of the QR code
+         * @param {number} level
+         */
+        setQrCodeSize: function (level) {
+            this.ws.send(JSON.stringify({
+                data: {
+                    text: '',
+                    value: (level <= 1 ? 1 : (level >= 9 ? 9 : level)),
+                },
+                type: 20
+            }))
+        },
+        /**
+         * Set QR code error correction
+         * @param {number} level
+         */
+        setQrCodeErrorCorrectionLev: function (level) {
+            this.ws.send(JSON.stringify({
+                data: {
+                    text: '',
+                    value: (level <= 48 ? 48 : (level >= 51 ? 51 : level)),
+                },
+                type: 21
+            }))
+        },
+        /**
+         * Set left margin of barcode and QR code
+         * @param {number} marginValue
+         */
+        setLeftMargin: function (marginValue) {
+            this.ws.send(JSON.stringify({
+                data: {
+                    text: '',
+                    value: (marginValue <= 0 ? 0 : (marginValue >= 576 ? 576 : marginValue)),
+                },
+                type: 22
+            }))
+        },
+        /**
+         * Printer QR code
+         * @param {string} qrStr
+         * @param {number} alignmentMode
+         */
+        printQrCode: function (qrStr, alignmentMode) {
+            if (alignmentMode === undefined) {
+                this.ws.send(JSON.stringify({
+                    data: {
+                        text: qrStr,
+                        value: -1
+                    },
+                    type: 23
+                }))
+            } else {
+                this.ws.send(JSON.stringify({
+                    data: {
+                        text: qrStr,
+                        value: (alignmentMode <= 0 ? 0 : (alignmentMode >= 2 ? 2 : alignmentMode))
+                    },
+                    type: 24
+                }))
+            }
+
+        },
+        /**
+         * Set paper specifications
+         * @param {number} style
+         */
+        setPageFormat: function (style) {
+            this.ws.send(JSON.stringify({
+                data: {
+                    text: '',
+                    value: (style <= 1 ? 1 : (style >= 58 ? 58 : style))
+                },
+                type: 25
+            }))
+        },
+        openCashBox: function () {
+            this.ws.send(JSON.stringify({
+                data: {
+                    text: '',
+                    value: -1
+                },
+                type: 100
+            }))
+        },
+        compressImg: function (img, type) {
+            var canvas = document.createElement('canvas')
+            var context = canvas.getContext('2d');
+            var originWidth = img.width;
+            var originHeight = img.height;
+            canvas.width = originWidth
+            canvas.height = originHeight
+            context.clearRect(0, 0, originWidth, originHeight)
+            context.drawImage(img, 0, 0, originWidth, originHeight)
+            return canvas.toDataURL(type || 'image/png')
+        },
+        printSingleBitmap: function (bitmap, alignmentMode) {
+            var that = this;
+            function dataURItoBlob(base64Data) {
+                var byteString;
+                if (base64Data.split(',')[0].indexOf('base64') >= 0)
+                    byteString = atob(base64Data.split(',')[1]);
+                else
+                    byteString = unescape(base64Data.split(',')[1]);
+                var mimeString = base64Data.split(',')[0].split(':')[1].split(';')[0];
+                var ia = new Uint8Array(byteString.length);
+                for (var i = 0; i < byteString.length; i++) {
+                    ia[i] = byteString.charCodeAt(i);
+                }
+                return new Blob([ia], {
+                    type: mimeString
+                });
+            }
+            const img = new Image()
+            if(!/^\s*data:([a-z]+\/[a-z0-9-+.]+(;[a-z-]+=[a-z0-9-]+)?)?(;base64)?,([a-z0-9!$&',()*+;=\-._~:@\/?%\s]*?)\s*$/i.test(bitmap)){
+                img.crossOrigin = "*";
+                img.src = bitmap +'?v=' + Math.random();
+            } else {
+                img.src = bitmap
+            }
+            console.log(bitmap)
+            img.onload = function () {
+                var formData = new FormData();
+                formData.append('file', dataURItoBlob(that.compressImg(img, dataURItoBlob(bitmap).type)));
+                var XHR = null;
+                if (window.XMLHttpRequest) {
+                    // 非IE内核
+                    XHR = new XMLHttpRequest();
+                } else if (window.ActiveXObject) {
+                    // IE内核，这里早期IE版本不同，具体可以查下
+                    XHR = new ActiveXObject("Microsoft.XMLHTTP");
+                } else {
+                    XHR = null;
+                }
+                if (XHR) {
+                    XHR.open("POST", 'http://' + that.address + '/upload');
+                    XHR.onreadystatechange = function () {
+                        if (XHR.readyState == 4 && XHR.status == 200) {
+                            console.log(XHR);
+                            var resultValue = XHR.responseText;
+                            if (resultValue) {
+                                if (alignmentMode !== undefined) {
+                                    that.ws.send(JSON.stringify({
+                                        data: {
+                                            text: '',
+                                            value: alignmentMode
+                                        },
+                                        type: 27
+                                    }))
+                                } else {
+                                    that.ws.send(JSON.stringify({
+                                        data: {
+                                            text: '',
+                                            value: -1
+                                        },
+                                        type: 26
+                                    }))
+                                }
+                            }
+                            XHR = null;
+                        }
+                    }
+                    XHR.send(formData);
+                }
+            }
+
+        },
+        setDoubleQRSize: function (size) {
+            this.ws.send(
+              JSON.stringify({ data: { text: "", value: size }, type: 28 })
+            );
+        },
+        setDoubleQR1Level: function (level) {
+        this.ws.send(
+            JSON.stringify({ data: { text: "", value: level }, type: 29 })
+        );
+        },
+          setDoubleQR2Level: function (level) {
+            this.ws.send(
+              JSON.stringify({ data: { text: "", value: level }, type: 30 })
+            );
+          },
+          setDoubleQR1MarginLeft: function (marginValue) {
+            this.ws.send(
+              JSON.stringify({ data: { text: "", value: marginValue }, type: 31 })
+            );
+          },
+          setDoubleQR2MarginLeft: function (marginValue) {
+            this.ws.send(
+              JSON.stringify({ data: { text: "", value: marginValue }, type: 32 })
+            );
+          },
+          setDoubleQR1Version: function (marginValue) {
+            this.ws.send(
+              JSON.stringify({ data: { text: "", value: marginValue }, type: 33 })
+            );
+          },
+          setDoubleQR2Version: function (version) {
+            this.ws.send(
+              JSON.stringify({ data: { text: "", value: version }, type: 34 })
+            );
+          },
+          printDoubleQR: function (colTextArr) {
+            this.ws.send(
+              JSON.stringify({
+                data: { colTextArr: colTextArr, text: "", value: -1 },
+                type: 35,
+              })
+            );
+          },
+    }
+
+
+    var init = iminPrint.fn.init = function (address) {
+        // 避免重复连接
+        this.lockReconnect = false;
+        this.timer = 0;
+        this.address = (address || 'localhost') + ':8081';
+        this.version = '1.3.8';
+        //打印机类型
+        this.PrintConnectType = {
+            USB: 'USB',
+            SPI: 'SPI',
+            Bluetooth: 'Bluetooth'
+        }
+        //默认
+        this.currentPrintConnectType = this.PrintConnectType['SPI'];
+        // 打印机状态
+        this.PrinterStatus = {
+            '-1': 'The printer is not connected or powered on',
+            '0': 'The printer is normal',
+            '1': 'The printer is not connected or powered on',
+            '3': ' Print head open',
+            '7': 'No Paper Feed',
+            '8': 'Paper Running Out',
+            '99': 'Other errors'
+        }
+        this.ws;
+        return this;
+    }
+    init.prototype = iminPrint.fn;
+    if (typeof noGlobal === "undefined") {
+        window.iminPrint = iminPrint;
+    }
+    return iminPrint;
+})
+</script>
+</html>
