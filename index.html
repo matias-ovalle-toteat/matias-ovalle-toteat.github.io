@@ -17,10 +17,16 @@
         iminPrintInstance.initPrinter("SPI");
         iminPrintInstance.getPrinterStatus("SPI", (status) => {
           if (status.value === 0) {
+            console.log('imin printer', 'ready to print');
             iminPrintInstance.printText(`${message}\n\n`, 0);
             iminPrintInstance.printAndFeedPaper(25);
+            console.log('imin printer', 'already printed');
+          } else {
+            console.error('imin printer error', 'status.value is not 0.', 'status:', status);
           }
         });
+      } else {
+        console.error('imin printer error', 'ws.readyState is not OPEN:', ws.readyState);
       }
     });
   }
