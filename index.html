@@ -11,31 +11,38 @@
 </body>
 <script>
   function initPrinter(message) {
+    console.log('printer', 'initPrinter');
     const iminPrintInstance = window.iminPrint('localhost');
     if (!iminPrintInstance) {
       console.error('imin printer error', 'imin print device not found on localhost');
+      console.log('printer', 'error', 'initPrinter');
     }
     iminPrintInstance.connect((ws) => {
+      console.log('printer', 'connect')
       if (ws.readyState === ws.OPEN) {
+        console.log('printer', 'ws.readyState === ws.OPEN');
         iminPrintInstance.initPrinter("SPI");
         iminPrintInstance.getPrinterStatus("SPI", (status) => {
           if (status.value === 0) {
+            console.log('printer', 'status.value === 0');
             printMessage(iminPrintInstance, message);
           } else {
+            console.log('printer', 'error', 'status.value !== 0');
             console.error('imin printer error', 'status.value is not 0.', 'status:', status);
           }
         });
       } else {
+        console.log('printer', 'error', 'ws.readyState !== ws.OPEN');
         console.error('imin printer error', 'ws.readyState is not OPEN:', ws.readyState);
       }
     });
   }
 
   function printMessage(printer, message) {
-    console.log('imin printer', 'ready to print');
+    console.log('printer', 'ready to print');
     printer.printText(`${message}\n\n`, 0);
     printer.printAndFeedPaper(25);
-    console.log('imin printer', 'already printed');
+    console.log('printer', 'already printed');
   }
 </script>
 <script id="iminprintjs">
