@@ -5,36 +5,49 @@
   <title>Document</title>
 </head>
 <body>
-  <div style="display: flex; align-items: center; justify-content: center; padding: 100px;">
+  <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 100px;">
     <button style="width: 200px; height: 100px;" onclick="initPrinter('lorem ipsum')">print text</button>
+    <button style="width: 100px; height: 100px; margin-top: 100px;" onclick="clearLogsArray()">clear logs</button>
+    <p id="logs"></p>
   </div>
 </body>
 <script>
+  let logsArray = [];
   function initPrinter(message) {
     console.log('printer', 'initPrinter');
+    logsArray.push('initPrinter');
     const iminPrintInstance = window.iminPrint('localhost');
     if (!iminPrintInstance) {
       console.error('imin printer error', 'imin print device not found on localhost');
       console.log('printer', 'error', 'initPrinter');
+      logsArray.push('error initPrinter');
     }
     iminPrintInstance.connect((ws) => {
-      console.log('printer', 'connect')
+      console.log('printer', 'connect');
+      logsArray.push('connect');
       if (ws.readyState === ws.OPEN) {
         console.log('printer', 'ws.readyState === ws.OPEN');
+        logsArray.push('ws.readyState === ws.OPEN');
+      }
+      if (ws.readyState === ws.OPEN) {
         iminPrintInstance.initPrinter("SPI");
         iminPrintInstance.getPrinterStatus("SPI", (status) => {
           if (status.value === 0) {
             console.log('printer', 'status.value === 0');
+            logsArray.push('status.value === 0');
             printMessage(iminPrintInstance, message);
           } else {
             console.log('printer', 'error', 'status.value !== 0');
             console.error('imin printer error', 'status.value is not 0.', 'status:', status);
+            logsArray.push(`error status.value is not 0. status: ${status}`);
           }
         });
       } else {
         console.log('printer', 'error', 'ws.readyState !== ws.OPEN');
         console.error('imin printer error', 'ws.readyState is not OPEN:', ws.readyState);
+        logsArray.push(`error imin printer error`);
       }
+      document.getElementById('logs').innerHTML = logsArray;
     });
   }
 
@@ -43,6 +56,11 @@
     printer.printText(`${message}\n\n`, 0);
     printer.printAndFeedPaper(25);
     console.log('printer', 'already printed');
+  }
+
+  function clearLogsArray() {
+    logsArray = [];
+    document.getElementById('logs').innerHTML = logsArray;
   }
 </script>
 <script id="iminprintjs">
