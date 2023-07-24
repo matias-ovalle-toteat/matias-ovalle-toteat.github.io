@@ -38,14 +38,16 @@
             printMessage(iminPrintInstance, message);
           } else {
             console.log('printer', 'error', 'status.value !== 0');
-            console.error('imin printer error', 'status.value is not 0.', 'status:', status);
             logsArray.push(`error status.value is not 0. status: ${status}`);
+            document.getElementById('logs').innerHTML = logsArray;
+            console.error('imin printer error', 'status.value is not 0.', 'status:', status);
           }
         });
       } else {
         console.log('printer', 'error', 'ws.readyState !== ws.OPEN');
-        console.error('imin printer error', 'ws.readyState is not OPEN:', ws.readyState);
         logsArray.push(`error imin printer error`);
+        document.getElementById('logs').innerHTML = logsArray;
+        console.error('imin printer error', 'ws.readyState is not OPEN:', ws.readyState);
       }
       document.getElementById('logs').innerHTML = logsArray;
     });
