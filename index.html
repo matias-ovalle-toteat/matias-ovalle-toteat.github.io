@@ -37,10 +37,11 @@
             logsArray.push('status.value === 0');
             printMessage(iminPrintInstance, message);
           } else {
-            console.log('printer', 'error', 'status.value !== 0');
-            logsArray.push(`error status.value is not 0. status: ${status}`);
+            const message = iminPrintInstance.PrinterStatus[status.value];
+            console.log('printer', 'error', 'status.value !== 0', status.value, message);
+            logsArray.push(`error status.value is not 0. status: ${status.value}, ${message}`);
             document.getElementById('logs').innerHTML = logsArray;
-            console.error('imin printer error', 'status.value is not 0.', 'status:', status);
+            console.error('imin printer error', 'status.value is not 0.', 'status:', status.value, message);
           }
         });
       } else {
