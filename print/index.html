@@ -18,7 +18,7 @@
   function initPrinterAndPrintText() {
     console.log('initPrinterAndPrintText');
     // Instantiate the print plugin
-    var IminPrintInstance = IminPrinter();
+    var IminPrintInstance = new IminPrinter();
     console.log('IminPrintInstance');
     // Create a websocket connection
     IminPrintInstance.connect().then(async (isConnect) => {
@@ -35,7 +35,7 @@
         const statusAfter = await IminPrintInstance.getPrinterStatus();
         console.log('Printer status AFTER INIT:', JSON.stringify(statusAfter));
         // 3. printText
-        IminPrintInstance.printText('Hello World');
+        IminPrintInstance.printText('Hello World\n\n');
         console.log('PRINT TEXT');
         // More print methods
       }
